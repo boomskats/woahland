@@ -10,23 +10,7 @@
 #include <getopt.h>
 
 #include "viture.h"
-
-// Configuration
-typedef struct {
-    float sensitivity_yaw;      // Sensitivity for horizontal movement
-    float sensitivity_pitch;    // Sensitivity for vertical movement
-    float deadzone;             // Minimum movement to register (in degrees)
-    float smoothing;            // Smoothing factor (0.0-1.0)
-    float roll_scroll_threshold; // Roll angle at which to trigger scrolling
-    float scroll_sensitivity;   // Sensitivity for scroll wheel
-    bool invert_x;              // Invert horizontal movement
-    bool invert_y;              // Invert vertical movement
-    bool invert_scroll;         // Invert scroll direction
-    
-    // Screen mapping ranges (in degrees)
-    float yaw_range;            // Total yaw range to map to screen width
-    float pitch_range;          // Total pitch range to map to screen height
-} MouseConfig;
+#include "mouse_config.h"
 
 // Tracking state
 typedef struct {
@@ -331,8 +315,10 @@ void toggle_tracking()
 void print_usage(const char *prog_name) {
     printf("Usage: %s [OPTIONS]\n", prog_name);
     printf("Options:\n");
-    printf("  -d, --debug    Enable debug output\n");
-    printf("  -h, --help     Show this help message\n");
+    printf("  -d, --debug        Enable debug output\n");
+    printf("  -c, --config PATH  Load config from specified file\n");
+    printf("  -s, --save-config  Save current config to user config file\n");
+    printf("  -h, --help         Show this help message\n");
 }
 
 int main(int argc, char *argv[])
@@ -340,16 +326,27 @@ int main(int argc, char *argv[])
     // Parse command-line options
     static struct option long_options[] = {
         {"debug", no_argument, 0, 'd'},
+        {"config", required_argument, 0, 'c'},
+        {"save-config", no_argument, 0, 's'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
     
+    char *config_path = NULL;
+    bool save_config_flag = false;
+    
     int opt;
-    while ((opt = getopt_long(argc, argv, "dh", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "dc:sh", long_options, NULL)) != -1) {
         switch (opt) {
             case 'd':
                 debug_mode = true;
                 printf("Debug mode enabled\n");
+                break;
+            case 'c':
+                config_path = optarg;
+                break;
+            case 's':
+                save_config_flag = true;
                 break;
             case 'h':
                 print_usage(argv[0]);
@@ -358,6 +355,21 @@ int main(int argc, char *argv[])
                 print_usage(argv[0]);
                 return 1;
         }
+    }
+    
+    // Load configuration
+    if (config_path) {
+        if (!load_config_file(config_path, &config)) {
+            fprintf(stderr, "Failed to load config from: %s\n", config_path);
+        }
+    } else {
+        load_config(&config);
+    }
+    
+    // Save configuration if requested
+    if (save_config_flag) {
+        save_config(&config);
+        return 0;
     }
     // Initialize virtual input device
     printf("Setting up virtual input device...\n");
@@ -474,12 +486,19 @@ int main(int argc, char *argv[])
                printf("  invertscroll    - Toggle scroll direction inversion\n");
                printf("  recenter        - Reset to current head orientation\n");
                printf("  status          - Display current settings\n");
+               printf("  save            - Save current settings to config file\n");
+               printf("  reload          - Reload settings from config file\n");
                printf("  quit            - Exit the program\n");
                printf("  debug           - Toggle debug output\n");
                printf("  help            - Show this help\n");
            } else if (strcmp(input_buffer, "debug") == 0) {
                debug_mode = !debug_mode;
                printf("Debug mode %s\n", debug_mode ? "enabled" : "disabled");
+           } else if (strcmp(input_buffer, "save") == 0) {
+               save_config(&config);
+           } else if (strcmp(input_buffer, "reload") == 0) {
+               load_config(&config);
+               printf("Configuration reloaded\n");
            } else {
                printf("Unknown command. Type 'help' for available commands.\n");
            }
