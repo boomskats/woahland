@@ -1,0 +1,7 @@
+build*
+include*
+libs*
+sample/build/CMakeCache.txt
+sample/build/CMakeFiles/
+sample/build/Makefile
+sample/build/cmake_install.cmake
