@@ -7,6 +7,7 @@
 #include <math.h>
 #include <fcntl.h>
 #include <linux/uinput.h>
+#include <getopt.h>
 
 #include "viture.h"
 
@@ -64,6 +65,7 @@ static MouseState state = {
     .initialized = false
 };
 static bool enabled = true;
+static bool debug_mode = false;
 
 // Convert byte array to float (from SDK example)
 static float makeFloat(uint8_t *data)
@@ -186,7 +188,9 @@ static void imuCallback(uint8_t *data, uint16_t len, uint32_t ts)
     float yaw = makeFloat(data + 8);
     
     // Debug output
-    printf("IMU: roll=%f pitch=%f yaw=%f\n", roll, pitch, yaw);
+    if (debug_mode) {
+        printf("IMU: roll=%f pitch=%f yaw=%f\n", roll, pitch, yaw);
+    }
     
     // Initialize reference position if needed
     if (!state.initialized) {
@@ -289,7 +293,9 @@ static void imuCallback(uint8_t *data, uint16_t len, uint32_t ts)
             
             // Send scroll event
             emit_scroll(uinput_fd, scroll_value, false); // false for vertical scrolling
-            printf("Scrolling: amount=%d\n", scroll_value);
+            if (debug_mode) {
+                printf("Scrolling: amount=%d\n", scroll_value);
+            }
         }
     }
     
@@ -304,7 +310,9 @@ static void imuCallback(uint8_t *data, uint16_t len, uint32_t ts)
 // MCU callback from glasses
 static void mcuCallback(uint16_t msgid, uint8_t *data, uint16_t len, uint32_t ts)
 {
-    printf("MCU callback: msgid=%d len=%d\n", msgid, len);
+    if (debug_mode) {
+        printf("MCU callback: msgid=%d len=%d\n", msgid, len);
+    }
     // Could handle device events here
 }
 
@@ -320,8 +328,37 @@ void toggle_tracking()
     }
 }
 
-int main()
+void print_usage(const char *prog_name) {
+    printf("Usage: %s [OPTIONS]\n", prog_name);
+    printf("Options:\n");
+    printf("  -d, --debug    Enable debug output\n");
+    printf("  -h, --help     Show this help message\n");
+}
+
+int main(int argc, char *argv[])
 {
+    // Parse command-line options
+    static struct option long_options[] = {
+        {"debug", no_argument, 0, 'd'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
+    
+    int opt;
+    while ((opt = getopt_long(argc, argv, "dh", long_options, NULL)) != -1) {
+        switch (opt) {
+            case 'd':
+                debug_mode = true;
+                printf("Debug mode enabled\n");
+                break;
+            case 'h':
+                print_usage(argv[0]);
+                return 0;
+            default:
+                print_usage(argv[0]);
+                return 1;
+        }
+    }
     // Initialize virtual input device
     printf("Setting up virtual input device...\n");
     uinput_fd = setup_uinput_device();
@@ -438,7 +475,11 @@ int main()
                printf("  recenter        - Reset to current head orientation\n");
                printf("  status          - Display current settings\n");
                printf("  quit            - Exit the program\n");
+               printf("  debug           - Toggle debug output\n");
                printf("  help            - Show this help\n");
+           } else if (strcmp(input_buffer, "debug") == 0) {
+               debug_mode = !debug_mode;
+               printf("Debug mode %s\n", debug_mode ? "enabled" : "disabled");
            } else {
                printf("Unknown command. Type 'help' for available commands.\n");
            }
