@@ -7,6 +7,7 @@
 // Socket path
 #define SOCKET_PATH_ENV "VITURE_MOUSE_SOCKET"
 #define DEFAULT_SOCKET_PATH "/tmp/viture-head-mouse.sock"
+#define USER_SOCKET_PATH "/tmp/viture-head-mouse-user.sock"
 
 // Socket server state
 typedef struct {

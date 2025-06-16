@@ -1,0 +1,5 @@
+# udev rule to allow users in the 'input' group to access /dev/uinput
+# Install to /etc/udev/rules.d/99-uinput-permissions.rules
+# Then run: sudo udevadm control --reload-rules && sudo udevadm trigger
+
+KERNEL=="uinput", GROUP="input", MODE="0664"

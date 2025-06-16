@@ -7,13 +7,32 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/stat.h>
+#include <pwd.h>
 
 #include "socket_server.h"
 
 // Get socket path from environment or use default
 static const char* get_socket_path() {
     const char *path = getenv(SOCKET_PATH_ENV);
-    return path ? path : DEFAULT_SOCKET_PATH;
+    if (path) return path;
+    
+    // Use different socket paths for root vs user
+    return (getuid() == 0) ? DEFAULT_SOCKET_PATH : USER_SOCKET_PATH;
+}
+
+// Get the original user info when running under sudo
+static void get_original_user(uid_t *uid, gid_t *gid) {
+    const char *sudo_uid = getenv("SUDO_UID");
+    const char *sudo_gid = getenv("SUDO_GID");
+    
+    if (sudo_uid && sudo_gid) {
+        *uid = atoi(sudo_uid);
+        *gid = atoi(sudo_gid);
+    } else {
+        *uid = getuid();
+        *gid = getgid();
+    }
 }
 
 // Handle a client command
@@ -121,6 +140,21 @@ static void* socket_server_thread(void *arg) {
         perror("Failed to bind socket");
         close(server->socket_fd);
         return NULL;
+    }
+    
+    // Set socket permissions so original user can access it when running under sudo
+    uid_t orig_uid, orig_gid;
+    get_original_user(&orig_uid, &orig_gid);
+    
+    // Make socket accessible to the original user
+    if (chown(socket_path, orig_uid, orig_gid) < 0) {
+        // Not fatal, but warn
+        fprintf(stderr, "Warning: Could not change socket ownership\n");
+    }
+    
+    // Set permissions to allow user/group read/write
+    if (chmod(socket_path, 0660) < 0) {
+        fprintf(stderr, "Warning: Could not set socket permissions\n");
     }
     
     // Listen for connections

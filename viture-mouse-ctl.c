@@ -8,6 +8,7 @@
 
 #define SOCKET_PATH_ENV "VITURE_MOUSE_SOCKET"
 #define DEFAULT_SOCKET_PATH "/tmp/viture-head-mouse.sock"
+#define USER_SOCKET_PATH "/tmp/viture-head-mouse-user.sock"
 
 static void print_usage(const char *prog) {
     printf("Usage: %s COMMAND [ARGS]\n", prog);
@@ -26,7 +27,10 @@ static void print_usage(const char *prog) {
 
 static const char* get_socket_path() {
     const char *path = getenv(SOCKET_PATH_ENV);
-    return path ? path : DEFAULT_SOCKET_PATH;
+    if (path) return path;
+    
+    // Use different socket paths for root vs user
+    return (getuid() == 0) ? DEFAULT_SOCKET_PATH : USER_SOCKET_PATH;
 }
 
 int main(int argc, char *argv[]) {
