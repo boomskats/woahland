@@ -11,6 +11,7 @@
 
 #include "viture.h"
 #include "mouse_config.h"
+#include "socket_server.h"
 
 // Tracking state
 typedef struct {
@@ -49,7 +50,9 @@ static MouseState state = {
     .initialized = false
 };
 static bool enabled = true;
+static bool paused = false;
 static bool debug_mode = false;
+static SocketServer socket_server;
 
 // Convert byte array to float (from SDK example)
 static float makeFloat(uint8_t *data)
@@ -164,7 +167,7 @@ void emit_scroll(int fd, int amount, bool horizontal)
 // IMU data callback from glasses
 static void imuCallback(uint8_t *data, uint16_t len, uint32_t ts)
 {
-    if (!enabled || uinput_fd < 0) return;
+    if (!enabled || paused || uinput_fd < 0) return;
     
     // Extract Euler angles
     float roll = makeFloat(data);
@@ -312,6 +315,54 @@ void toggle_tracking()
     }
 }
 
+// Pause tracking temporarily
+void pause_tracking() {
+    paused = true;
+    printf("Head tracking paused\n");
+}
+
+// Resume tracking
+void resume_tracking() {
+    paused = false;
+    printf("Head tracking resumed\n");
+}
+
+// Recenter tracking
+void recenter_tracking() {
+    state.initialized = false;
+    printf("Position recentered. Hold still for a moment.\n");
+}
+
+// Reload configuration
+void reload_configuration() {
+    load_config(&config);
+    printf("Configuration reloaded\n");
+}
+
+// Get current tracking state
+bool get_tracking_enabled() {
+    return enabled && !paused;
+}
+
+// Get current sensitivity
+float get_current_sensitivity() {
+    return config.sensitivity_yaw;
+}
+
+// Set sensitivity
+void set_current_sensitivity(float value) {
+    config.sensitivity_yaw = config.sensitivity_pitch = value;
+    printf("Sensitivity set to %.1f\n", value);
+}
+
+// Adjust sensitivity
+void adjust_current_sensitivity(float delta) {
+    float new_sens = config.sensitivity_yaw + delta;
+    if (new_sens > 0) {
+        set_current_sensitivity(new_sens);
+    }
+}
+
 void print_usage(const char *prog_name) {
     printf("Usage: %s [OPTIONS]\n", prog_name);
     printf("Options:\n");
@@ -402,6 +453,22 @@ int main(int argc, char *argv[])
     // Set IMU frequency to 120Hz for smoother tracking
     set_imu_fq(IMU_FREQUENCE_120);
     
+    // Initialize and start socket server
+    memset(&socket_server, 0, sizeof(socket_server));
+    socket_server.on_toggle = toggle_tracking;
+    socket_server.on_recenter = recenter_tracking;
+    socket_server.on_pause = pause_tracking;
+    socket_server.on_resume = resume_tracking;
+    socket_server.on_reload = reload_configuration;
+    socket_server.get_enabled = get_tracking_enabled;
+    socket_server.get_sensitivity = get_current_sensitivity;
+    socket_server.set_sensitivity = set_current_sensitivity;
+    socket_server.adjust_sensitivity = adjust_current_sensitivity;
+    
+    if (!start_socket_server(&socket_server)) {
+        fprintf(stderr, "Warning: Failed to start socket server\n");
+    }
+    
     printf("Head mouse control started. Press Enter to toggle on/off, type 'quit' to exit.\n");
     
     // Main loop - handle user commands
@@ -459,9 +526,7 @@ int main(int argc, char *argv[])
                config.invert_scroll = !config.invert_scroll;
                printf("Scroll direction %s\n", config.invert_scroll ? "inverted" : "normal");
            } else if (strcmp(input_buffer, "recenter") == 0) {
-               // Reset the center position to current orientation
-               state.initialized = false;
-               printf("Position recentered. Hold still for a moment.\n");
+               recenter_tracking();
            } else if (strcmp(input_buffer, "status") == 0) {
                // Print current configuration
                printf("Current configuration:\n");
@@ -497,8 +562,7 @@ int main(int argc, char *argv[])
            } else if (strcmp(input_buffer, "save") == 0) {
                save_config(&config);
            } else if (strcmp(input_buffer, "reload") == 0) {
-               load_config(&config);
-               printf("Configuration reloaded\n");
+               reload_configuration();
            } else {
                printf("Unknown command. Type 'help' for available commands.\n");
            }
@@ -506,6 +570,7 @@ int main(int argc, char *argv[])
     }
     
     // Cleanup
+    stop_socket_server(&socket_server);
     set_imu(false);
     deinit();
     
