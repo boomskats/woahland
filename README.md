@@ -1,28 +1,41 @@
 # woahland
 
-> *Head tracking-based mouse control for Viture Pro XR glasses on Linux*
+## What 
 
-Turns your head movements into mouse cursor movements.  Originally built for Wayland, but X11 support turned out to be easy enough to add.
+`woahland` is a mouse control driver for Viture Pro XR glasses on Linux. It uses the IMU data from Viture glasses to let you control the mouse cursor by moving your head around. 
 
-## What is this?
+## Why 
 
-woahland uses the IMU data from Viture glasses to control the mouse cursor. It lets you anchor the mouse cursor in the center of your view while panning the virtual desktop around it with head movements. The initial use case was me wanting to walk around with a Steam Deck in my bag and a split Bluetooth keyboard in my pockets, toggling head tracking on and off for occasional cursor control. 
+I wanted to try walking around with a Steam Deck in my bag and a split Bluetooth keyboard in my pockets, with the ability to toggle head tracking on and off for occasional cursor control. The IMU unit in the Vitures turned out to be surprisingly great for this, with high accuracy and very low latency, so here we are.
 
-However, it turned out to also add some stabilising comfort by anchoring a mouse cursor to a fixed place in the center of your view, providing something to focus on when the screens are all over the place. So that's also nice.
+## Features
+
+By default `woahland` uses a "fixed cursor" experience. It lets you anchor the mouse cursor in the center of your view, so it feels like you're moving your desktop around a stationary cursor. This is surprisingly useful for making the whole high-resolution functional virtual desktop AR experience feel a bit more stable. 
+
+You can change all of that by inverting the axes, adjusting the sensitivity, tweaking the deadzone, etc. if you want to.
 
 Core functionality:
+
 - Head tracking via 120Hz IMU data from Viture glasses (surprisingly great)
-- Fixed cursor with head-controlled desktop panning (default)
-- Roll-to-scroll by tilting your head (less great, needs work)
+- Roll-to-scroll by tilting your head (needs work, ramps too quickly)
 - Keybinding integration for window managers via RPC client binary
 - Works on both Wayland and X11
 - Runtime configuration without restart
 
-## How It Works
+## Quickstart
 
-Reads IMU data at 120Hz from the glasses. The defaults are tuned for the "fixed cursor" experience - sensitivity of 45 tries to make head movement feel like you're moving the world around a stationary cursor. Y-axis is inverted (looking up moves content down) and rolling your head beyond 20° triggers scrolling.
+You should obviously take a look at what `quick-start.sh` does before you run it, but this should work: 
 
-## Quick Start
+```bash
+  git clone https://github.com/yourusername/woahland.git
+  cd woahland
+  ./quick-start.sh
+  ./build/run_head_mouse_wayland.sh  # Run directly from repo root
+```
+
+Then follow the instructions in the console / integrate the viture-mouse-ctl with your keybindings etc.
+
+## Manual build / dev setup
 
 ### Prerequisites
 
@@ -60,6 +73,8 @@ echo 'uinput' | sudo tee /etc/modules-load.d/uinput.conf
 ```
 
 ### Build
+
+This is kinda what the quick-start.sh does already:
 
 1. **Download the Viture Linux SDK** from Viture's official sources
 2. **Extract the SDK** and note the location of `libviture_one_sdk.so` and headers
