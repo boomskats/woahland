@@ -127,8 +127,6 @@ make x11      # X11 version only
 ./run_head_mouse_x11.sh
 ```
 
-The cursor will appear fixed in the center of your view. Move your head to pan around. It might feel backwards for a while, but should start to feel natural ish pretty quickly.
-
 ## Usage
 
 ### Basic Controls
@@ -222,39 +220,6 @@ export VITURE_MOUSE_SOCKET="/tmp/my-custom-socket.sock"
 ./head_mouse_wayland
 viture-mouse-ctl toggle  # Will use the same custom socket
 ```
-
-## Troubleshooting
-
-### "Failed to initialize Viture SDK"
-- Check that your Viture glasses are connected and powered on
-- Verify the USB connection (magnetic connector can be finicky)
-- Try unplugging and reconnecting
-
-### "Could not open X11 display" 
-- Make sure you're running in a graphical session
-- Check `echo $DISPLAY` shows something like `:0`
-
-### "Error opening /dev/uinput" (Wayland version)
-- Run `./test-permissions.sh` to check setup
-- If needed, run `./setup-permissions.sh` and log out/in
-
-### "viture-head-mouse is not running" (control client)
-- Make sure the main program is running first
-- Check that you're using the same user (root vs regular user use different sockets)
-
-### Movement feels "backwards" or uncomfortable
-- Try `viture-mouse-ctl recenter` to reset center position while holding your head level and pointing forward
-- Adjust sensitivity: start with 30-60 for most people
-- Invert the axes if you like traditional mouse-like behavior
-
-
-## Contributing
-
-Contributions welcome! This started as a Wayland-specific hack for walking around with AR glasses, but I use it a fair bit now.
-
-Potential improvements:
-- Auto-reconnection when the magnetic USB connector inevitably gets bumped
-- Scrolling sucks, needs work
 
 ## License
 
