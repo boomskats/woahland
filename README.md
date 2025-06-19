@@ -1,5 +1,7 @@
 # woahland
 
+<video src="https://github.com/user-attachments/assets/848b74e2-7ad1-4d29-99fe-833f2fe63a0b" autoplay></video>
+
 ## What 
 
 `woahland` is a mouse control driver for Viture Pro XR glasses on Linux. It uses the IMU data from Viture glasses to let you control the mouse cursor by moving your head around. 
